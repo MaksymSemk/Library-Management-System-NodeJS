@@ -1,7 +1,7 @@
 import type { Request, Response } from 'express';
-import { LibraryService } from '../services/services.js';
-import { BookSchema } from '../schemas/schema.js';
-import { db } from '../storage/storage.js';
+import { LibraryService } from '../services/services';
+import { BookSchema } from '../schemas/schema';
+import { db } from '../storage/storage';
 
 export const BookController = {
   // GET /books

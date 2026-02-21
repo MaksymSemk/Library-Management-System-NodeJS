@@ -1,7 +1,7 @@
-import { UserSchema } from '../schemas/schema.js';
+import { UserSchema } from '../schemas/schema';
 import type { Request, Response } from 'express';
-import { LibraryService } from '../services/services.js';
-import { db } from '../storage/storage.js';
+import { LibraryService } from '../services/services';
+import { db } from '../storage/storage';
 
 export const UserController = {
   // GET /users

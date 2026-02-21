@@ -1,5 +1,5 @@
-import { db } from '../storage/storage.js';
-import type { Loan, Book, User } from '../storage/storage.js';
+import { db } from '../storage/storage';
+import type { Loan, Book, User } from '../storage/storage';
 
 let bookIdCounter = 1;
 let userIdCounter = 1;
