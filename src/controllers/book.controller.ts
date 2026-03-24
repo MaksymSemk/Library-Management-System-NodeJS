@@ -1,58 +1,48 @@
-import type { Request, Response } from 'express';
+import { Request, Response } from 'express';
+import prisma  from '../lib/prisma';
 import { LibraryService } from '../services/services';
 import { BookSchema } from '../schemas/schema';
-import { db } from '../storage/storage';
+import { asyncHandler } from '../utils/asyncHandler';
+
 
 export const BookController = {
-  // GET /books
-  getAll: (req: Request, res: Response) => {
-    res.json(Array.from(db.books.values()));
-  },
+  getAll: asyncHandler(async (req: Request, res: Response) => {
+    const books = await prisma.book.findMany();
+    res.json(books);
+  }),
 
-  // GET /books/:id
-  getOne: (req: Request, res: Response) => {
-    const book = db.books.get(req.params.id);
-    if (!book) {
-      return res.status(404).json({ message: 'Книгу не знайдено' });
-    }
+  getOne: asyncHandler(async (req: Request, res: Response) => {
+    const book = await prisma.book.findUnique({ where: { id: req.params.id } });
+    if (!book) return res.status(404).json({ message: 'Book not found' });
     res.json(book);
-  },
+  }),
 
-  // POST /books
-  create: (req: Request, res: Response) => {
+  create: asyncHandler(async (req: Request, res: Response) => {
     const validation = BookSchema.safeParse(req.body);
-    if (!validation.success) {
-      return res.status(400).json({ errors: validation.error.format() });
-    }
-    const book = LibraryService.createBook(validation.data);
-    res.status(201).json(book);
-  },
-
-  // PUT /books/:id
-  update: (req: Request, res: Response) => {
-    const book = db.books.get(req.params.id);
-    if (!book) {
-      return res.status(404).json({ message: 'Книгу не знайдено' });
-    }
-
-    const validation = BookSchema.safeParse(req.body);
-    if (!validation.success) {
-      return res.status(400).json({ errors: validation.error.format() });
-    }
-
-    const updatedBook = { ...book, ...validation.data };
-    db.books.set(req.params.id, updatedBook);
-    res.json(updatedBook);
-  },
-
-  // DELETE /books/:id
-  delete: (req: Request, res: Response) => {
-    const exists = db.books.has(req.params.id);
-    if (!exists) {
-      return res.status(404).json({ message: 'Книгу не знайдено' });
-    }
+    if (!validation.success) return res.status(400).json(validation.error.format());
     
-    db.books.delete(req.params.id);
-    res.status(204).send(); // 204 No Content - успішне видалення
-  }
+    const book = await LibraryService.createBook(validation.data);
+    res.status(201).json(book);
+  }),
+
+  update: asyncHandler(async (req: Request, res: Response) => {
+    const validation = BookSchema.safeParse(req.body);
+    if (!validation.success) return res.status(400).json(validation.error.format());
+
+    try {
+      const updatedBook = await LibraryService.updateBook(req.params.id, validation.data);
+      res.json(updatedBook);
+    } catch (e) {
+      res.status(404).json({ message: 'Book not found' });
+    }
+  }),
+
+  delete: asyncHandler( async (req: Request, res: Response) => {
+    try {
+      await LibraryService.deleteBook(req.params.id);
+      res.status(204).send();
+    } catch (e) {
+      res.status(404).json({ message: 'Book not found' });
+    }
+  })
 };

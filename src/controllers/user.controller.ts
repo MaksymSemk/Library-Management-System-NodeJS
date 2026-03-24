@@ -1,32 +1,31 @@
-import { UserSchema } from '../schemas/schema';
-import type { Request, Response } from 'express';
-import { LibraryService } from '../services/services';
-import { db } from '../storage/storage';
+import { Request, Response } from 'express';
+import  prisma  from '../lib/prisma';
+import { asyncHandler } from '../utils/asyncHandler';
+
 
 export const UserController = {
-  // GET /users
-  getAll: (req: Request, res: Response) => {
-    const users = Array.from(db.users.values());
+  getAll: asyncHandler(async (req: Request, res: Response) => {
+    const users = await prisma.user.findMany({
+      select: { id: true, name: true, email: true, role: true, createdAt: true }
+    });
     res.json(users);
-  },
+  }),
 
-  // GET /users/:id
-  getOne: (req: Request, res: Response) => {
-    const user = db.users.get(req.params.id);
-    if (!user) {
-      return res.status(404).json({ message: 'Користувача не знайдено' });
-    }
+  getOne: asyncHandler(async (req: Request, res: Response) => {
+    const user = await prisma.user.findUnique({
+      where: { id: req.params.id },
+      select: { id: true, name: true, email: true, role: true }
+    });
+    if (!user) return res.status(404).json({ message: 'User not found' });
     res.json(user);
-  },
+  }),
 
-  // POST /users
-  create: (req: Request, res: Response) => {
-    const validation = UserSchema.safeParse(req.body);
-    if (!validation.success) {
-      return res.status(400).json({ errors: validation.error.format() });
-    }
-    
-    const user = LibraryService.createUser(validation.data);
-    res.status(201).json(user);
-  }
+  getMe: asyncHandler(async (req: Request, res: Response) => {
+    const userId = (req as any).user.userId;
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, name: true, email: true, role: true }
+    });
+    res.json(user);
+  })
 };

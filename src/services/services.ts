@@ -1,55 +1,48 @@
-import { db } from '../storage/storage';
-import type { Loan, Book, User } from '../storage/storage';
-
-let bookIdCounter = 1;
-let userIdCounter = 1;
-let loanIdCounter = 1;
+import prisma from '../lib/prisma';
 
 export class LibraryService {
-  static createBook(data: Omit<Book, 'id' | 'available'>): Book {
-    const book: Book = { ...data, id: String(bookIdCounter++), available: true };
-    db.books.set(book.id, book);
-    return book;
+  static async createBook(data: any) {
+    return await prisma.book.create({ data });
   }
 
-  static createUser(data: Omit<User, 'id'>): User {
-    const user: User = { ...data, id: String(userIdCounter++) };
-    db.users.set(user.id, user);
-    return user;
+  static async updateBook(id: string, data: any) {
+    return await prisma.book.update({ where: { id }, data });
   }
 
-  static createLoan(userId: string, bookId: string): Loan {
-    const book = db.books.get(bookId);
-    const user = db.users.get(userId);
-
-    if (!book) throw new Error('Книгу не знайдено');
-    if(!user) throw new Error('Користувача не знайдено');
-    if (!book.available) throw new Error('Книга вже видана');
-
-    const loan: Loan = {
-      id: String(loanIdCounter++),
-      userId,
-      bookId,
-      loanDate: new Date(),
-      returnDate: null,
-      status: 'ACTIVE'
-    };
-
-    book.available = false;
-    db.loans.set(loan.id, loan);
-    return loan;
+  static async deleteBook(id: string) {
+    return await prisma.book.delete({ where: { id } });
   }
 
-  static returnBook(loanId: string): Loan {
-    const loan = db.loans.get(loanId);
-    if (!loan || loan.status === 'RETURNED') throw new Error('Активну позику не знайдено');
-
-    const book = db.books.get(loan.bookId);
-    if (book) book.available = true;
-
-    loan.status = 'RETURNED';
-    loan.returnDate = new Date();
+  static async createLoan(userId: string, bookId: string) {
+    const book = await prisma.book.findUnique({ where: { id: bookId } });
     
-    return loan;
+    if (!book) throw new Error('Book not found');
+    if (!book.available) throw new Error('Book is already checked out');
+
+    return await prisma.$transaction([
+      prisma.loan.create({
+        data: { userId, bookId, status: 'ACTIVE' }
+      }),
+      prisma.book.update({
+        where: { id: bookId },
+        data: { available: false }
+      })
+    ]);
+  }
+
+  static async returnBook(loanId: string) {
+    const loan = await prisma.loan.findUnique({ where: { id: loanId } });
+    if (!loan || loan.status === 'RETURNED') throw new Error('Active loan not found');
+
+    return await prisma.$transaction([
+      prisma.loan.update({
+        where: { id: loanId },
+        data: { status: 'RETURNED', returnDate: new Date() }
+      }),
+      prisma.book.update({
+        where: { id: loan.bookId },
+        data: { available: true }
+      })
+    ]);
   }
 }
