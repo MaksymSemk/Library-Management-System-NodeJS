@@ -12,7 +12,8 @@ export const BookController = {
   }),
 
   getOne: asyncHandler(async (req: Request, res: Response) => {
-    const book = await prisma.book.findUnique({ where: { id: req.params.id } });
+    const bookId = String(req.params.id);
+    const book = await prisma.book.findUnique({ where: { id: bookId } });
     if (!book) return res.status(404).json({ message: 'Book not found' });
     res.json(book);
   }),
@@ -30,7 +31,8 @@ export const BookController = {
     if (!validation.success) return res.status(400).json(validation.error.format());
 
     try {
-      const updatedBook = await LibraryService.updateBook(req.params.id, validation.data);
+      const bookId = String(req.params.id);
+      const updatedBook = await LibraryService.updateBook(bookId, validation.data);
       res.json(updatedBook);
     } catch (e) {
       res.status(404).json({ message: 'Book not found' });
@@ -39,7 +41,8 @@ export const BookController = {
 
   delete: asyncHandler( async (req: Request, res: Response) => {
     try {
-      await LibraryService.deleteBook(req.params.id);
+      const bookId = String(req.params.id);
+      await LibraryService.deleteBook(bookId);
       res.status(204).send();
     } catch (e) {
       res.status(404).json({ message: 'Book not found' });

@@ -31,7 +31,8 @@ export const LoanController = {
 
   returnLoan: asyncHandler(async (req: Request, res: Response) => {
     try {
-      const loan = await LibraryService.returnBook(req.params.id);
+      const loanId = String(req.params.id);
+      const loan = await LibraryService.returnBook(loanId);
       res.json(loan);
     } catch (e: any) {
       res.status(404).json({ message: e.message });
